@@ -1,0 +1,13 @@
+{
+  "name": "spacefast-static-comments-capsule",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@spacefast/zero": "0.4.1",
+    "preact": "^10.29.8"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "typescript": "^6.0.3"
+  }
+}

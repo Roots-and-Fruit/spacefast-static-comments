@@ -1,0 +1,11 @@
+# Local / tooling
+.DS_Store
+Thumbs.db
+*.log
+node_modules/
+.spacefast/
+
+# Session artifacts (keep out of the product remote)
+*.data.json
+*-portability-audit.html
+*-portability-audit.data.json

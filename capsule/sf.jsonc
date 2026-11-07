@@ -1,0 +1,13 @@
+{
+  "$schema": "https://spacefast.com/schemas/sf.json",
+  "name": "spacefast-static-comments",
+  "access": "public",
+  "runtime": {
+    "kind": "zero",
+    "server": "server/index.ts",
+    // Named, and deliberately absent on disk. With no file behind it the capsule
+    // is server-only: it ships no generated app shell, so the static WordPress
+    // index.html stays the homepage instead of being shadowed.
+    "client": "client/index.tsx"
+  }
+}

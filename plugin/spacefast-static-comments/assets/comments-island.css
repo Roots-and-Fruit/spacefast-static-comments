@@ -1,0 +1,280 @@
+/* Spacefast Static Comments
+ *
+ * All visual tokens use --ssc-* variables with plain fallbacks.
+ * Themes overwrite --ssc-* (CDS forks map them from --cds-*).
+ * Byline calendar icon and molecule spacing belong to the theme, not this file.
+ */
+
+:root {
+  --ssc-ink: inherit;
+  --ssc-ink-muted: inherit;
+  --ssc-ink-deep: inherit;
+  --ssc-surface: rgba(127, 127, 127, 0.06);
+  --ssc-surface-soft: rgba(127, 127, 127, 0.04);
+  --ssc-canvas: transparent;
+  --ssc-rule: rgba(127, 127, 127, 0.25);
+  --ssc-accent: #d462cd;
+  --ssc-primary: #f2e9a8;
+  --ssc-primary-deep: #ffd700;
+  --ssc-on-primary: #070708;
+  --ssc-danger: #f87171;
+  --ssc-radius: 0.5rem;
+  --ssc-radius-pill: 999px;
+  --ssc-space-2: 0.5rem;
+  --ssc-space-3: 0.75rem;
+  --ssc-space-4: 1rem;
+  --ssc-space-5: 1.5rem;
+  --ssc-space-6: 2rem;
+  --ssc-text-sm: 0.875rem;
+  --ssc-text-md: 0.95rem;
+  --ssc-weight-light: 300;
+  --ssc-weight-semibold: 600;
+  --ssc-icon-size: 1rem;
+  --ssc-icon-gap: 0.42rem;
+  --ssc-card-border-width: 3px;
+}
+
+/* Comments link molecule (markup from this plugin; theme may restyle). */
+.sf-byline-comments {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ssc-icon-gap);
+  margin: 0;
+  color: var(--ssc-ink-muted);
+  font-size: var(--ssc-text-md);
+  line-height: 1.25;
+  text-decoration: none;
+}
+
+.sf-byline-comments[hidden] {
+  display: none !important;
+}
+
+.sf-byline-comments:hover {
+  color: var(--ssc-primary-deep);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.sf-byline-meta__icon {
+  flex: none;
+  width: var(--ssc-icon-size);
+  height: var(--ssc-icon-size);
+  color: var(--ssc-primary-deep);
+  opacity: 0.92;
+}
+
+/* —— Comment section shell —————————————————————————————————————————— */
+.sf-comments {
+  box-sizing: border-box;
+  width: 100%;
+  margin-block-start: var(--ssc-space-6) !important;
+  padding-block-start: var(--ssc-space-6);
+  border-block-start: 1px solid var(--ssc-rule);
+  color: var(--ssc-ink);
+  font-family: inherit;
+}
+
+.sf-comments__inner {
+  width: 100%;
+  max-inline-size: none;
+}
+
+.sf-comments__heading {
+  margin: 0 0 var(--ssc-space-5);
+  font-size: clamp(1.35rem, 2vw, 1.65rem);
+  line-height: 1.25;
+}
+
+.sf-comments__state {
+  margin: 0 0 var(--ssc-space-5);
+  opacity: 0.8;
+  font-size: var(--ssc-text-md);
+  line-height: 1.6;
+}
+
+.sf-comments__list {
+  list-style: none;
+  margin: 0 0 var(--ssc-space-6);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ssc-space-4);
+}
+
+/* Indented child replies — padding only, no duplicate outer bar */
+.sf-comments__children {
+  list-style: none;
+  margin: var(--ssc-space-4) 0 0;
+  padding: 0 0 0 1.25rem;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+/* Default reader comment: same recipe as CDS .cds-rule-card */
+.sf-comments__item {
+  padding: 1.1rem 1.35rem;
+  border: 1px solid var(--ssc-rule);
+  border-inline-start: var(--ssc-card-border-width) solid var(--ssc-primary-deep);
+  border-radius: 0 var(--ssc-radius) var(--ssc-radius) 0;
+  background: var(--ssc-surface);
+}
+
+/* Nested reader replies: .cds-rule-card--nested */
+.sf-comments__children .sf-comments__item {
+  background: var(--ssc-surface-soft);
+  border-inline-start-color: var(--ssc-primary);
+}
+
+/* Post-author comments: .cds-rule-card--accent */
+.sf-comments__item.sf-comments__item--author,
+.sf-comments__children .sf-comments__item.sf-comments__item--author {
+  border-inline-start-color: var(--ssc-accent);
+}
+
+.sf-comments__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--ssc-space-2) var(--ssc-space-3);
+  margin: 0 0 0.55rem;
+  font-size: var(--ssc-text-sm);
+}
+
+.sf-comments__author {
+  font-weight: var(--ssc-weight-semibold);
+  color: var(--ssc-ink-deep);
+}
+
+.sf-comments__permalink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.sf-comments__permalink:hover {
+  text-decoration: underline;
+}
+
+.sf-comments__time {
+  opacity: 0.72;
+}
+
+.sf-comments__badge {
+  font-size: 0.75rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--ssc-radius-pill);
+  border: 1px solid var(--ssc-primary);
+  color: var(--ssc-primary);
+  opacity: 0.9;
+}
+
+.sf-comments__badge--author {
+  border-color: var(--ssc-accent);
+  color: var(--ssc-accent);
+}
+
+.sf-comments__body {
+  margin: 0;
+  font-weight: var(--ssc-weight-light);
+  word-break: break-word;
+  line-height: 1.65;
+}
+
+.sf-comments__body p {
+  margin: 0 0 0.75rem;
+  font-weight: var(--ssc-weight-light);
+}
+
+.sf-comments__body p:last-child {
+  margin-bottom: 0;
+}
+
+.sf-comments__body--plain {
+  white-space: pre-wrap;
+}
+
+.sf-comments__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ssc-space-4);
+}
+
+.sf-comments__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.sf-comments__label {
+  font-size: var(--ssc-text-sm);
+  font-weight: var(--ssc-weight-semibold);
+}
+
+.sf-comments__input,
+.sf-comments__textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--ssc-rule);
+  border-radius: 0.375rem;
+  background: var(--ssc-canvas);
+  color: inherit;
+  font: inherit;
+  font-weight: var(--ssc-weight-light);
+  line-height: 1.5;
+}
+
+.sf-comments__textarea {
+  min-height: 6.5rem;
+  resize: vertical;
+}
+
+.sf-comments__input:focus-visible,
+.sf-comments__textarea:focus-visible,
+.sf-comments__submit:focus-visible {
+  outline: 2px solid var(--ssc-primary);
+  outline-offset: 2px;
+}
+
+.sf-comments__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ssc-space-3);
+}
+
+.sf-comments__counter {
+  font-size: 0.8125rem;
+  opacity: 0.75;
+}
+
+.sf-comments__submit {
+  cursor: pointer;
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--ssc-radius-pill);
+  border: 1px solid transparent;
+  background: var(--ssc-primary-deep);
+  color: var(--ssc-on-primary);
+  font: inherit;
+  font-weight: var(--ssc-weight-semibold);
+}
+
+.sf-comments__submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.sf-comments__error {
+  margin: 0;
+  font-size: var(--ssc-text-sm);
+  color: var(--ssc-danger);
+}
+
+.sf-comments__footnote {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  opacity: 0.72;
+}
