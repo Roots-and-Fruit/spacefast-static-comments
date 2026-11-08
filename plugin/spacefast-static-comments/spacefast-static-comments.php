@@ -3,21 +3,156 @@
  * Plugin Name:       Spacefast Static Comments
  * Plugin URI:        https://rootsandfruit.com
  * Description:       Renders approved WordPress comment threads (including nested replies) into the static HTML export and mounts the Spacefast Zero live comment island below them, plus a local Studio `/api/comments` bridge.
- * Version:           0.2.0
+ * Version:           0.3.0
  * Requires at least: 6.5
  * Requires PHP:      8.1
  * Author:            Roots & Fruit
  * License:           GPL-2.0-or-later
  * Text Domain:       spacefast-static-comments
+ * Requires Plugins:  spacefast-wordpress, simply-static
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SF_STATIC_COMMENTS_VERSION', '0.2.0' );
+define( 'SF_STATIC_COMMENTS_VERSION', '0.3.0' );
+define( 'SF_STATIC_COMMENTS_FILE', __FILE__ );
+define( 'SF_STATIC_COMMENTS_BASENAME', plugin_basename( __FILE__ ) );
 define( 'SF_STATIC_COMMENTS_LOCAL_OPTION', 'sf_static_comments_local_store' );
 define( 'SF_STATIC_COMMENTS_TARGET_OPTION', 'sf_static_comments_export_target' );
+
+/**
+ * Ensure plugin.php helpers are available (activation + early admin checks).
+ */
+function sf_static_comments_load_plugin_helpers(): void {
+	if ( ! function_exists( 'is_plugin_active' ) || ! function_exists( 'deactivate_plugins' ) ) {
+		require_once ABSPATH . 'wp-admin/includes/plugin.php';
+	}
+}
+
+/**
+ * Whether a plugin basename is active (site or network).
+ *
+ * @param string $basename Plugin basename, e.g. `simply-static/simply-static.php`.
+ */
+function sf_static_comments_is_plugin_active( string $basename ): bool {
+	sf_static_comments_load_plugin_helpers();
+
+	if ( is_plugin_active( $basename ) ) {
+		return true;
+	}
+
+	return is_multisite() && function_exists( 'is_plugin_active_for_network' ) && is_plugin_active_for_network( $basename );
+}
+
+/**
+ * Whether Spacefast (spacefast-wordpress) is available.
+ */
+function sf_static_comments_has_spacefast(): bool {
+	return sf_static_comments_is_plugin_active( 'spacefast-wordpress/spacefast-wordpress.php' )
+		|| defined( 'SPACEFAST_WORDPRESS_VERSION' );
+}
+
+/**
+ * Whether Simply Static free or Pro is available.
+ *
+ * Pro is an add-on that normally rides on free, but accept either basename/constant
+ * so a Pro-present install still satisfies this plugin.
+ */
+function sf_static_comments_has_simply_static(): bool {
+	return sf_static_comments_is_plugin_active( 'simply-static/simply-static.php' )
+		|| sf_static_comments_is_plugin_active( 'simply-static-pro/simply-static-pro.php' )
+		|| defined( 'SIMPLY_STATIC_VERSION' )
+		|| defined( 'SIMPLY_STATIC_PRO_VERSION' );
+}
+
+/**
+ * Human-readable list of missing required plugins.
+ *
+ * @return string[]
+ */
+function sf_static_comments_missing_dependencies(): array {
+	$missing = array();
+
+	if ( ! sf_static_comments_has_spacefast() ) {
+		$missing[] = 'Spacefast (spacefast-wordpress)';
+	}
+
+	if ( ! sf_static_comments_has_simply_static() ) {
+		$missing[] = 'Simply Static (free or Pro)';
+	}
+
+	return $missing;
+}
+
+/**
+ * Activation gate: refuse to stay active without Spacefast + Simply Static.
+ */
+function sf_static_comments_activate(): void {
+	$missing = sf_static_comments_missing_dependencies();
+	if ( empty( $missing ) ) {
+		return;
+	}
+
+	sf_static_comments_load_plugin_helpers();
+	deactivate_plugins( SF_STATIC_COMMENTS_BASENAME );
+
+	$message = sprintf(
+		/* translators: %s: comma-separated list of missing plugin names */
+		__( 'Spacefast Static Comments requires the following plugins to be installed and active: %s.', 'spacefast-static-comments' ),
+		implode( ', ', $missing )
+	);
+
+	wp_die(
+		esc_html( $message ),
+		esc_html__( 'Plugin dependency check', 'spacefast-static-comments' ),
+		array( 'back_link' => true )
+	);
+}
+register_activation_hook( __FILE__, 'sf_static_comments_activate' );
+
+/**
+ * If dependencies disappear after activation, deactivate and notice.
+ */
+function sf_static_comments_guard_dependencies(): void {
+	$missing = sf_static_comments_missing_dependencies();
+	if ( empty( $missing ) ) {
+		return;
+	}
+
+	sf_static_comments_load_plugin_helpers();
+
+	if ( sf_static_comments_is_plugin_active( SF_STATIC_COMMENTS_BASENAME ) ) {
+		deactivate_plugins( SF_STATIC_COMMENTS_BASENAME );
+	}
+
+	if ( ! is_admin() || wp_doing_ajax() ) {
+		return;
+	}
+
+	add_action(
+		'admin_notices',
+		static function () use ( $missing ): void {
+			printf(
+				'<div class="notice notice-error"><p>%s</p></div>',
+				esc_html(
+					sprintf(
+						/* translators: %s: comma-separated list of missing plugin names */
+						__( 'Spacefast Static Comments was deactivated because required plugins are missing or inactive: %s.', 'spacefast-static-comments' ),
+						implode( ', ', $missing )
+					)
+				)
+			);
+		}
+	);
+}
+add_action( 'plugins_loaded', 'sf_static_comments_guard_dependencies', 20 );
+
+// Do not register comment/export behavior without the required stack.
+if ( ! empty( sf_static_comments_missing_dependencies() ) ) {
+	return;
+}
 
 /**
  * Determine whether the current request is a singular post that can display comments.
@@ -527,213 +662,58 @@ function sf_static_comments_shortcode( $atts = array() ): string {
 add_shortcode( 'spacefast_comments', 'sf_static_comments_shortcode' );
 
 /**
- * Local Studio `/api/comments` bridge.
+ * Whether the local `/api/comments` bridge may run on this request.
  *
- * On Spacefast, `/api/comments` is answered by the Zero capsule before static files.
- * Locally in WordPress Studio (`.local` / `localhost`), WordPress intercepts `/api/comments`:
- * - If `sf dev` is running on `http://127.0.0.1:4173`, it proxies the request to `sf dev`.
- * - Otherwise, it answers with the exact same JSON shape backed by the local WP option
- *   (`sf_static_comments_local_store`) so you can test the full comment UI, states, and
- *   layout right inside Studio without publishing.
+ * Requires a `local` environment type and a local request host (`localhost`, `127.0.0.1`,
+ * `::1`, `*.local`, `*.test`). Everywhere else `/api/comments` is a normal WordPress 404.
  */
-function sf_static_comments_handle_local_api(): void {
-	$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
-	$path        = (string) wp_parse_url( $request_uri, PHP_URL_PATH );
-	if ( '/api/comments' !== rtrim( $path, '/' ) ) {
+function sf_static_comments_local_bridge_enabled(): bool {
+	$host = isset( $_SERVER['HTTP_HOST'] ) ? strtolower( sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) ) : '';
+	$host = str_starts_with( $host, '[' ) ? trim( strstr( $host, ']', true ), '[' ) : (string) preg_replace( '/:\d+$/', '', $host );
+
+	$is_local_host = in_array( $host, array( 'localhost', '127.0.0.1', '::1' ), true )
+		|| str_ends_with( $host, '.local' )
+		|| str_ends_with( $host, '.test' );
+
+	$enabled = 'local' === wp_get_environment_type() && $is_local_host;
+
+	/**
+	 * Filter whether the local Studio `/api/comments` bridge is enabled.
+	 *
+	 * @param bool   $enabled Whether the bridge runs.
+	 * @param string $host    Normalized request host.
+	 */
+	return (bool) apply_filters( 'sf_static_comments_local_bridge_enabled', $enabled, $host );
+}
+
+/**
+ * Load and route the local bridge only when the gate passes.
+ */
+function sf_static_comments_maybe_load_local_bridge(): void {
+	if ( ! sf_static_comments_local_bridge_enabled() ) {
 		return;
 	}
 
-	$method = isset( $_SERVER['REQUEST_METHOD'] ) ? strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) ) : 'GET';
-
-	// Optional proxy to local `sf dev` if running on 127.0.0.1:4173.
-	$sf_dev_base = (string) apply_filters( 'sf_static_comments_local_zero_url', 'http://127.0.0.1:4173' );
-	if ( '' !== $sf_dev_base ) {
-		$query_string = isset( $_SERVER['QUERY_STRING'] ) ? sanitize_text_field( wp_unslash( $_SERVER['QUERY_STRING'] ) ) : '';
-		$target_url   = rtrim( $sf_dev_base, '/' ) . '/api/comments' . ( '' !== $query_string ? '?' . $query_string : '' );
-		$raw_body     = ( 'POST' === $method ) ? (string) file_get_contents( 'php://input' ) : '';
-
-		$proxied = wp_remote_request(
-			$target_url,
-			array(
-				'method'  => $method,
-				'timeout' => 1,
-				'headers' => array(
-					'Content-Type' => 'application/json',
-					'Accept'       => 'application/json',
-				),
-				'body'    => ( 'POST' === $method ) ? $raw_body : null,
-			)
-		);
-
-		if ( ! is_wp_error( $proxied ) ) {
-			$status_code = (int) wp_remote_retrieve_response_code( $proxied );
-			$body        = (string) wp_remote_retrieve_body( $proxied );
-			if ( $status_code >= 200 && $status_code < 500 && '' !== $body ) {
-				status_header( $status_code );
-				header( 'Content-Type: application/json; charset=utf-8' );
-				header( 'X-SF-Comments-Backend: sf-dev-proxy' );
-				echo $body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-				exit;
-			}
-		}
-	}
-
-	// Built-in local Studio store fallback (mirrors capsule/server/index.ts contract).
-	$require_auth = (bool) apply_filters( 'sf_static_comments_require_auth', false );
-	$is_logged_in = is_user_logged_in();
-	$current_user = wp_get_current_user();
-	$viewer_id    = $is_logged_in ? 'wp:' . (int) $current_user->ID : 'guest:local-studio';
-	$viewer_name  = ( $is_logged_in && ! empty( $current_user->display_name ) ) ? (string) $current_user->display_name : 'Guest';
-
-	$store = get_option( SF_STATIC_COMMENTS_LOCAL_OPTION, array() );
-	if ( ! is_array( $store ) ) {
-		$store = array();
-	}
-
-	if ( 'GET' === $method ) {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$raw_post = isset( $_GET['post'] ) ? sanitize_text_field( wp_unslash( $_GET['post'] ) ) : '';
-		$slug     = sanitize_title( $raw_post );
-		if ( '' === $slug ) {
-			wp_send_json(
-				array(
-					'error' => array(
-						'code'    => 'post_required',
-						'message' => 'Pass ?post=<slug>.',
-					),
-				),
-				400
-			);
-		}
-
-		$post_comments = isset( $store[ $slug ] ) && is_array( $store[ $slug ] ) ? array_values( $store[ $slug ] ) : array();
-		$formatted     = array();
-		foreach ( $post_comments as $row ) {
-			if ( ! is_array( $row ) ) {
-				continue;
-			}
-			$formatted[] = array(
-				'id'        => isset( $row['id'] ) ? (string) $row['id'] : '',
-				'author'    => isset( $row['authorName'] ) ? (string) $row['authorName'] : 'Guest',
-				'body'      => isset( $row['body'] ) ? (string) $row['body'] : '',
-				'mine'      => isset( $row['authorId'] ) && $viewer_id === $row['authorId'],
-				'createdAt' => isset( $row['createdAt'] ) ? (string) $row['createdAt'] : gmdate( 'c' ),
-			);
-		}
-
-		header( 'X-SF-Comments-Backend: studio-local' );
-		wp_send_json(
-			array(
-				'data' => array(
-					'post'        => $slug,
-					'count'       => count( $formatted ),
-					'requireAuth' => $require_auth,
-					'viewer'      => array(
-						'userId'          => $viewer_id,
-						'displayName'     => $viewer_name,
-						'isAuthenticated' => $is_logged_in,
-					),
-					'comments'    => $formatted,
-				),
-			),
-			200
-		);
-	}
-
-	if ( 'POST' === $method ) {
-		$raw_input = (string) file_get_contents( 'php://input' );
-		$payload   = json_decode( $raw_input, true );
-		if ( ! is_array( $payload ) ) {
-			$payload = array();
-		}
-
-		if ( ! empty( $payload['hp'] ) ) {
-			wp_send_json(
-				array(
-					'error' => array(
-						'code'    => 'comment_rejected',
-						'message' => 'That comment looks like spam.',
-					),
-				),
-				422
-			);
-		}
-
-		$slug = isset( $payload['post'] ) ? sanitize_title( (string) $payload['post'] ) : '';
-		$body = isset( $payload['body'] ) ? trim( sanitize_textarea_field( (string) $payload['body'] ) ) : '';
-		$body = mb_substr( $body, 0, 1000 );
-
-		if ( '' === $slug || '' === $body ) {
-			wp_send_json(
-				array(
-					'error' => array(
-						'code'    => 'invalid_comment',
-						'message' => 'Send JSON with a post slug and a non-empty comment body.',
-					),
-				),
-				400
-			);
-		}
-
-		if ( $require_auth && ! $is_logged_in ) {
-			wp_send_json(
-				array(
-					'error' => array(
-						'code'    => 'auth_required',
-						'message' => 'Sign in is required to post a comment on this site.',
-					),
-				),
-				401
-			);
-		}
-
-		$raw_author = isset( $payload['author'] ) ? trim( sanitize_text_field( (string) $payload['author'] ) ) : '';
-		$author     = '' !== $raw_author ? mb_substr( $raw_author, 0, 40 ) : $viewer_name;
-
-		$url_matches = preg_match_all( '/https?:\/\//i', $body );
-		if ( false !== $url_matches && $url_matches > 3 ) {
-			wp_send_json(
-				array(
-					'error' => array(
-						'code'    => 'comment_rejected',
-						'message' => 'That comment looks like spam and was not posted.',
-					),
-				),
-				422
-			);
-		}
-
-		if ( ! isset( $store[ $slug ] ) || ! is_array( $store[ $slug ] ) ) {
-			$store[ $slug ] = array();
-		}
-
-		$new_id     = (string) ( count( $store[ $slug ] ) + 1 );
-		$created_at = gmdate( 'c' );
-		$store[ $slug ][] = array(
-			'id'         => $new_id,
-			'postSlug'   => $slug,
-			'authorName' => $author,
-			'body'       => $body,
-			'authorId'   => $viewer_id,
-			'createdAt'  => $created_at,
-		);
-
-		update_option( SF_STATIC_COMMENTS_LOCAL_OPTION, $store, false );
-
-		header( 'X-SF-Comments-Backend: studio-local' );
-		wp_send_json(
-			array(
-				'data' => array(
-					'id'        => $new_id,
-					'post'      => $slug,
-					'author'    => $author,
-					'body'      => $body,
-					'mine'      => true,
-					'createdAt' => $created_at,
-				),
-			),
-			201
-		);
-	}
+	require_once __DIR__ . '/includes/local-bridge.php';
+	add_action( 'parse_request', 'sf_static_comments_handle_local_api', 1 );
 }
-add_action( 'parse_request', 'sf_static_comments_handle_local_api', 1 );
+add_action( 'plugins_loaded', 'sf_static_comments_maybe_load_local_bridge' );
+
+/**
+ * Keep `/api/comments` a plain 404 when the bridge is off.
+ *
+ * Without this, WordPress's 404 permalink guessing redirects it to any post whose slug
+ * starts with `comments`.
+ *
+ * @param string|false $redirect_url  Canonical redirect target.
+ * @param string       $requested_url Requested URL.
+ * @return string|false
+ */
+function sf_static_comments_skip_api_canonical_redirect( $redirect_url, $requested_url ) {
+	$path = (string) wp_parse_url( (string) $requested_url, PHP_URL_PATH );
+	return '/api/comments' === rtrim( $path, '/' ) ? false : $redirect_url;
+}
+add_filter( 'redirect_canonical', 'sf_static_comments_skip_api_canonical_redirect', 10, 2 );
+
+require_once __DIR__ . '/includes/zero-provisioner.php';
+require_once __DIR__ . '/includes/admin-settings.php';

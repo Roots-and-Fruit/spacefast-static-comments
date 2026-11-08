@@ -1,0 +1,73 @@
+name: Product change
+description: A change a site owner or reader would notice. Start with the pitch, then who it is for, then how to build it.
+title: "[Who] can …"
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Write this as a product change, not a dump of files to edit. Open with the elevator pitch: currently vs after this issue. The next four sections describe the site owner or reader. The last section should be detailed enough that a developer or agent can start in the right layer without a second discovery pass.
+
+        This plugin bakes approved WordPress comment threads into Simply Static HTML exports and mounts a live Spacefast Zero comment island below them, managed from **Settings → Spacefast Comments**.
+
+  - type: textarea
+    id: tldr
+    attributes:
+      label: TL;DR
+      description: |
+        The elevator pitch. Two sentences: what is true today, then what will be true when this issue is done. Start the first with “Currently,” and the second with “By addressing this issue,” so a reader never has to guess before vs after. Someone who reads only this section should know whether to open the rest.
+      placeholder: Currently, the comment archive and live island only mount when a post template renders the core/post-content block. By addressing this issue, classic PHP themes get an automatic fallback so comments appear without editing single.php.
+    validations:
+      required: true
+
+  - type: textarea
+    id: who
+    attributes:
+      label: Who this is for
+      description: Name the person and the moment they are in (site owner, administrator, or reader) and what they are trying to do. This keeps the issue attached to a human job. If you cannot name them, you are still describing a system change, not a product change.
+      placeholder: A site owner running a classic PHP theme activates Spacefast Static Comments and expects comments to appear on their posts without editing theme templates.
+    validations:
+      required: true
+
+  - type: textarea
+    id: experience
+    attributes:
+      label: How this impacts the product experience
+      description: What changes in wp-admin or on the published post once this ships. A screen, a toggle, a comment section, a byline count, a status badge. Be specific enough that two people would picture the same screen.
+      placeholder: On a classic theme without core/post-content, the comment archive and live form still render once at the end of singular post content (or where comments_template() runs), and block themes keep their exact current placement.
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: What Done looks like
+      description: The check that closes the issue. A theme to activate, a setting to flip, a post URL to open, a test that fails before the change. Include important negatives (what this issue will not change). This is how you know the experience landed, not merely that a PR merged.
+      placeholder: Activate a classic theme, open a published post with comments open, and see the archive thread and live comment form rendered once. Activate a block theme and confirm the section still renders once inside .wp-block-post-content.
+    validations:
+      required: true
+
+  - type: textarea
+    id: urgency
+    attributes:
+      label: Urgency
+      description: Why this is ahead of other open issues, or say it can wait. Cost of delay only. "Nothing is decaying; do it when touching this surface" is a valid answer. This is for sequencing, not persuasion.
+      placeholder: Needed before broad adoption by sites still on classic themes; block-theme sites are unaffected today.
+    validations:
+      required: true
+
+  - type: textarea
+    id: technical
+    attributes:
+      label: How to solve this technically
+      description: |
+        Enough for a developer or agent to start without reverse-engineering the plugin. Include current behavior, intended change, likely files or surfaces, data already in the product to reuse, contracts that must not break, and out of scope.
+
+        This should not be a full implementation plan or a file-by-file patch. It should be heavier than a sticky note. If someone still has to guess whether this is PHP rendering, the JS island, the Studio bridge, or the Zero capsule, this section is too thin.
+      placeholder: |
+        Current: spacefast-static-comments.php hooks render_block_core/post-content (and offers [spacefast_comments]).
+        Change: track whether the section rendered during the request and provide a fallback on the_content / comments_template when core/post-content never ran.
+        Surface: spacefast-static-comments.php and includes/admin-settings.php. Reuse sf_static_comments_should_render() and sf_static_comments_render_section().
+        Do not: render the section twice when both core/post-content and the_content run, or break two-column block theme article frames.
+    validations:
+      required: true

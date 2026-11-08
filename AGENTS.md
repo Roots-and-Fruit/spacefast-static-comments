@@ -16,6 +16,8 @@
    Never key comments by WordPress numeric `post_ID`, so URLs and comment threads survive migrations and re-imports.
 5. **Guest-first, SSO-ready.**
    When `ctx.env.COMMENTS_REQUIRE_AUTH` is `"1"` or `"true"`, `addComment` and `POST /api/comments` reject unauthenticated callers (`!ctx.auth.isAuthenticated`) with `401 auth_required`, and `GET /api/comments` reports `requireAuth: true` plus `viewer.isAuthenticated` so the island can prompt the reader to sign in.
+6. **Follow the canonical security contract (`SECURITY.md`).**
+   Before changing `capsule/server/index.ts`, `capsule/shared/comments.ts`, `capsule/shared/export-manifest.ts`, or the plugin bridge/island, read `plugin/spacefast-static-comments/SECURITY.md` (mirrored in Studio at `wp-content/plugins/spacefast-static-comments/SECURITY.md`). Keep the 12-step POST validation order, server-bound author rules, rate/cap limits, and error codes identical across both servers.
 
 ## Commands
 

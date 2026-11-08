@@ -1,0 +1,15 @@
+/.gitignore
+/.distignore
+/.phpcs.cache
+/.phpunit.cache
+/.playwright-cli
+.git/
+.github/
+/AGENTS.md
+/SECURITY.md
+/composer.json
+/composer.lock
+/phpcs.xml
+/phpunit.xml.dist
+/tests
+/vendor

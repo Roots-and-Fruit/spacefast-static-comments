@@ -60,7 +60,9 @@
       name: "",
       body: "",
       pending: false,
-      error: ""
+      error: "",
+      hp: "",
+      formShownAt: 0
     };
 
     try {
@@ -150,6 +152,9 @@
         if (item.mine) {
           meta.appendChild(el("span", "sf-comments__badge", "you"));
         }
+        if (item.isGuest) {
+          meta.appendChild(el("span", "sf-comments__badge sf-comments__badge--guest", "guest"));
+        }
 
         var bodyP = el("p", "sf-comments__body sf-comments__body--plain", item.body || "");
         li.appendChild(meta);
@@ -176,6 +181,26 @@
       }
 
       var form = el("form", "sf-comments__form");
+      if (!state.formShownAt) state.formShownAt = Date.now();
+
+      // Honeypot: people never see or reach it; form-filling bots tend to fill it.
+      var hpWrap = el("div", "sf-comments__hp");
+      hpWrap.setAttribute("aria-hidden", "true");
+      var hpId = "sf-comment-website-" + slug;
+      var hpLabel = el("label", "", "Website");
+      hpLabel.setAttribute("for", hpId);
+      var hpInput = el("input", "");
+      hpInput.id = hpId;
+      hpInput.name = "website";
+      hpInput.type = "text";
+      hpInput.tabIndex = -1;
+      hpInput.autocomplete = "off";
+      hpInput.value = state.hp;
+      hpInput.addEventListener("input", function (e) {
+        state.hp = e.target.value;
+      });
+      hpWrap.appendChild(hpLabel);
+      hpWrap.appendChild(hpInput);
 
       var nameField = el("div", "sf-comments__field");
       var nameId = "sf-comment-name-" + slug;
@@ -228,6 +253,7 @@
 
       form.appendChild(nameField);
       form.appendChild(bodyField);
+      form.appendChild(hpWrap);
       form.appendChild(actions);
 
       var errorEl = el("p", "sf-comments__error");
@@ -275,7 +301,9 @@
           body: JSON.stringify({
             post: slug,
             author: state.name,
-            body: cleaned
+            body: cleaned,
+            hp: state.hp,
+            t: Date.now() - state.formShownAt
           })
         })
           .then(function (res) {

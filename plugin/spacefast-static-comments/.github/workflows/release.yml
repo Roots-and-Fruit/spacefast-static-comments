@@ -1,0 +1,117 @@
+name: Release
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release plugin zip
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Read the plugin version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          PLUGIN_DIR="."
+          if [[ -f "plugin/spacefast-static-comments/spacefast-static-comments.php" ]]; then
+            PLUGIN_DIR="plugin/spacefast-static-comments"
+          fi
+          VERSION=$(grep -m1 "Version:" "${PLUGIN_DIR}/spacefast-static-comments.php" | sed -E 's/.*Version:[[:space:]]*//' | tr -d '\r')
+          if [[ -z "${VERSION}" ]]; then
+            echo "Plugin version header was not found."
+            exit 1
+          fi
+          TAG="v${VERSION}"
+          echo "plugin_dir=${PLUGIN_DIR}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "zip_name=spacefast-static-comments-${VERSION}.zip" >> "$GITHUB_OUTPUT"
+          if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q "${TAG}$"; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "Tag ${TAG} already exists."
+          else
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Extract changelog for this version
+        id: changelog
+        if: steps.version.outputs.release == 'true'
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          PLUGIN_DIR: ${{ steps.version.outputs.plugin_dir }}
+        run: |
+          set -euo pipefail
+          NOTES_FILE="${RUNNER_TEMP}/release-notes.md"
+          CHANGELOG_PATH="CHANGELOG.md"
+          if [[ ! -f "${CHANGELOG_PATH}" && -f "${PLUGIN_DIR}/CHANGELOG.md" ]]; then
+            CHANGELOG_PATH="${PLUGIN_DIR}/CHANGELOG.md"
+          fi
+          README_PATH="readme.txt"
+          if [[ ! -f "${README_PATH}" && -f "${PLUGIN_DIR}/readme.txt" ]]; then
+            README_PATH="${PLUGIN_DIR}/readme.txt"
+          fi
+          node .github/scripts/extract-release-notes.mjs \
+            --version "$RELEASE_VERSION" \
+            --changelog "$CHANGELOG_PATH" \
+            --readme "$README_PATH" \
+            --out "$NOTES_FILE"
+          echo "===== GitHub release notes ====="
+          cat "$NOTES_FILE"
+          echo "================================"
+          echo "notes_file=${NOTES_FILE}" >> "$GITHUB_OUTPUT"
+
+      - name: Create ZIP package
+        id: package
+        if: steps.version.outputs.release == 'true'
+        shell: bash
+        env:
+          PLUGIN_DIR: ${{ steps.version.outputs.plugin_dir }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/spacefast-static-comments-release
+          DISTIGNORE="${PLUGIN_DIR}/.distignore"
+          if [[ ! -f "${DISTIGNORE}" ]]; then
+            DISTIGNORE=".distignore"
+          fi
+          rsync -a --exclude-from="${DISTIGNORE}" "${PLUGIN_DIR}/" "/tmp/spacefast-static-comments-release/spacefast-static-comments/"
+          cd /tmp/spacefast-static-comments-release
+          zip -r "${GITHUB_WORKSPACE}/${{ steps.version.outputs.zip_name }}" "spacefast-static-comments/"
+          cd "${GITHUB_WORKSPACE}"
+          if [[ ! -f "${{ steps.version.outputs.zip_name }}" ]]; then
+            echo "ZIP package was not created."
+            exit 1
+          fi
+          echo "zip_path=${{ steps.version.outputs.zip_name }}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload ZIP as workflow artifact
+        if: steps.version.outputs.release == 'true'
+        uses: actions/upload-artifact@v5
+        with:
+          name: spacefast-static-comments-${{ steps.version.outputs.version }}
+          path: ${{ steps.package.outputs.zip_path }}
+
+      - name: Create the GitHub release and attach the ZIP
+        if: steps.version.outputs.release == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.version.outputs.tag }}"
+          TITLE="${{ steps.version.outputs.version }}"
+          NOTES_FILE="${{ steps.changelog.outputs.notes_file }}"
+          ZIP_PATH="${{ steps.package.outputs.zip_path }}"
+          gh release create "${TAG}" --title "${TITLE}" --notes-file "${NOTES_FILE}" --target "${GITHUB_SHA}"
+          gh release upload "${TAG}" "${ZIP_PATH}" --clobber

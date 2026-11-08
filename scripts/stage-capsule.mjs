@@ -69,7 +69,7 @@ export async function stageCapsule({ targetDir, spaceName = "" }) {
 
   return {
     targetDir: outDir,
-    staged: ["sf.jsonc", "server/index.ts", "shared/comments.ts"],
+    staged: ["sf.jsonc", "server/index.ts", "shared/comments.ts", "shared/export-manifest.ts"],
   };
 }
 
