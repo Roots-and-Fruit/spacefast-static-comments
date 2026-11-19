@@ -6,8 +6,9 @@ Locally in Studio it also answers `/api/comments` so the island works without pu
 
 Prefix: `sf_static_comments_` / `SF_STATIC_COMMENTS_`. Text domain: `spacefast-static-comments`.
 
-**Requires** active `spacefast-wordpress` and Simply Static free (`simply-static`) or Pro
-(`simply-static-pro`). Declared via `Requires Plugins` plus an activation/`admin_init` guard.
+**Requires** Simply Static free (`simply-static`) or Pro (`simply-static-pro`), declared
+via `Requires Plugins` plus an activation/`plugins_loaded` guard. `spacefast-wordpress` is
+optional and enables 1-click Zero provisioning plus automatic `spacefast_publish` staging.
 
 ## Layout
 

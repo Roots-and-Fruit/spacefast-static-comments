@@ -3,20 +3,20 @@
  * Plugin Name:       Spacefast Static Comments
  * Plugin URI:        https://rootsandfruit.com
  * Description:       Renders approved WordPress comment threads (including nested replies) into the static HTML export and mounts the Spacefast Zero live comment island below them, plus a local Studio `/api/comments` bridge.
- * Version:           0.3.0
+ * Version:           0.3.1
  * Requires at least: 6.5
  * Requires PHP:      8.1
  * Author:            Roots & Fruit
  * License:           GPL-2.0-or-later
  * Text Domain:       spacefast-static-comments
- * Requires Plugins:  spacefast-wordpress, simply-static
+ * Requires Plugins:  simply-static
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SF_STATIC_COMMENTS_VERSION', '0.3.0' );
+define( 'SF_STATIC_COMMENTS_VERSION', '0.3.1' );
 define( 'SF_STATIC_COMMENTS_FILE', __FILE__ );
 define( 'SF_STATIC_COMMENTS_BASENAME', plugin_basename( __FILE__ ) );
 define( 'SF_STATIC_COMMENTS_LOCAL_OPTION', 'sf_static_comments_local_store' );
@@ -70,14 +70,15 @@ function sf_static_comments_has_simply_static(): bool {
 /**
  * Human-readable list of missing required plugins.
  *
+ * Simply Static (free or Pro) is required so static HTML exports include comment
+ * threads and island assets. `spacefast-wordpress` is optional: sites that use it
+ * get 1-click Zero provisioning and automatic `spacefast_publish` staging, while
+ * CLI-published sites (`sf publish`) use Simply Static's local directory export.
+ *
  * @return string[]
  */
 function sf_static_comments_missing_dependencies(): array {
 	$missing = array();
-
-	if ( ! sf_static_comments_has_spacefast() ) {
-		$missing[] = 'Spacefast (spacefast-wordpress)';
-	}
 
 	if ( ! sf_static_comments_has_simply_static() ) {
 		$missing[] = 'Simply Static (free or Pro)';
@@ -87,7 +88,7 @@ function sf_static_comments_missing_dependencies(): array {
 }
 
 /**
- * Activation gate: refuse to stay active without Spacefast + Simply Static.
+ * Activation gate: refuse to stay active without Simply Static.
  */
 function sf_static_comments_activate(): void {
 	$missing = sf_static_comments_missing_dependencies();

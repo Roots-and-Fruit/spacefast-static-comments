@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-19
+
+### Changed
+
+- Spacefast (`spacefast-wordpress`) is now optional instead of required at activation, so sites that export a local Simply Static directory and deploy with the Spacefast CLI (`sf publish`) can run Spacefast Static Comments alongside Simply Static alone. When `spacefast-wordpress` is not installed, the **Zero Server** tab in **Settings → Spacefast Comments** shows a CLI/local export status and keeps salt rotation plus the compiled `shared/export-manifest.ts` available.
+
+### Fixed
+
+- Simply Static local-directory exports no longer stage pre-compiled `__spacefast/zero/deploy.json` and `_spacefast/platform/` files unless Simply Static is publishing directly through `spacefast-wordpress`, keeping local export folders clean for CLI `sf publish` workflows.
+
 ## [0.3.0] - 2026-11-08
 
 ### Added
@@ -39,6 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - First packaged release: renders approved WordPress comment threads (up to 6 levels deep) into Simply Static HTML exports, mounts the live Spacefast Zero comment island below post content, adds a comment count link to the post byline, and provides a local Studio `/api/comments` bridge and server-only Zero capsule.
 
-[Unreleased]: https://github.com/Roots-and-Fruit/spacefast-static-comments/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/Roots-and-Fruit/spacefast-static-comments/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/Roots-and-Fruit/spacefast-static-comments/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/Roots-and-Fruit/spacefast-static-comments/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Roots-and-Fruit/spacefast-static-comments/releases/tag/v0.2.0

@@ -3,8 +3,8 @@ Contributors: webdevmattcrom
 Requires at least: 6.5
 Tested up to: 7.2
 Requires PHP: 8.1
-Requires Plugins: spacefast-wordpress, simply-static
-Stable tag: 0.3.0
+Requires Plugins: simply-static
+Stable tag: 0.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Tags: comments, static, simply-static, spacefast
@@ -30,6 +30,17 @@ Spacefast Static Comments keeps WordPress as your content archive and uses your 
 4. Open **Settings → Spacefast Comments** and click **Provision Zero Comment Server on This Space**.
 
 == Changelog ==
+
+= 0.3.1 =
+Released 2026-11-19.
+
+**Changed**
+
+* Spacefast (`spacefast-wordpress`) is now optional instead of required at activation, so sites that export a local Simply Static directory and deploy with the Spacefast CLI (`sf publish`) can run Spacefast Static Comments alongside Simply Static alone. When `spacefast-wordpress` is not installed, the **Zero Server** tab in **Settings → Spacefast Comments** shows a CLI/local export status and keeps salt rotation plus the compiled `shared/export-manifest.ts` available.
+
+**Fixed**
+
+* Simply Static local-directory exports no longer stage pre-compiled `__spacefast/zero/deploy.json` and `_spacefast/platform/` files unless Simply Static is publishing directly through `spacefast-wordpress`, keeping local export folders clean for CLI `sf publish` workflows.
 
 = 0.3.0 =
 Released 2026-11-08.
@@ -66,6 +77,9 @@ Released 2026-11-07.
 * First packaged release: renders approved WordPress comment threads (up to 6 levels deep) into Simply Static HTML exports, mounts the live Spacefast Zero comment island below post content, adds a comment count link to the post byline, and provides a local Studio `/api/comments` bridge and server-only Zero capsule.
 
 == Upgrade Notice ==
+
+= 0.3.1 =
+Makes spacefast-wordpress optional so CLI-published Simply Static sites (sf publish) can run Spacefast Static Comments without self-deactivating, and scopes automatic deploy.json staging to spacefast-wordpress exports.
 
 = 0.3.0 =
 Adds Settings -> Spacefast Comments with 1-click Zero server provisioning, automatic Simply Static publish hooks, and the 12-step /api/comments security hardening across Studio and Spacefast Zero. Requires active spacefast-wordpress and Simply Static plugins.

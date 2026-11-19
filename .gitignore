@@ -7,5 +7,6 @@ node_modules/
 
 # Session artifacts (keep out of the product remote)
 *.data.json
+2026-*-*.html
 *-portability-audit.html
 *-portability-audit.data.json

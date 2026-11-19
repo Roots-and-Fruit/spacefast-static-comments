@@ -870,15 +870,23 @@ function sf_static_comments_register_publish_hooks(): void {
 add_action( 'init', 'sf_static_comments_register_publish_hooks', 25 );
 
 /**
- * Insert the `sf_static_comments_stage` task right before `spacefast_publish` (or `wrapup`).
+ * Insert the `sf_static_comments_stage` task right before `spacefast_publish`
+ * when Simply Static is publishing directly to Spacefast via `spacefast-wordpress`.
+ *
+ * Local-directory exports (such as CLI `sf publish` / `shipit` pipelines) stage the
+ * TypeScript Zero capsule at publish time instead of writing pre-compiled `deploy.json`
+ * platform chunks into the local archive root.
  *
  * @param array<int, string> $tasks           Task list.
  * @param string             $delivery_method Delivery method.
  * @return array<int, string>
  */
 function sf_static_comments_filter_simply_static_tasks( array $tasks, string $delivery_method ): array {
-	unset( $delivery_method );
 	if ( in_array( 'sf_static_comments_stage', $tasks, true ) ) {
+		return $tasks;
+	}
+
+	if ( 'spacefast' !== $delivery_method && ! in_array( 'spacefast_publish', $tasks, true ) ) {
 		return $tasks;
 	}
 

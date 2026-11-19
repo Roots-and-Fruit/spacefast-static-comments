@@ -470,7 +470,10 @@ function sf_static_comments_render_server_tab(): void {
 	$is_provisioned = 'provisioned' === $state['status'] && '' !== $state['space_id'] && $state['space_id'] === $conn['space_id'];
 	$in_sync        = $is_provisioned && '' !== $current_digest && $state['deploy_digest'] === $current_digest;
 
-	if ( ! $conn['selected'] ) {
+	if ( ! $conn['available'] ) {
+		$badge_class = 'ar-rf-outcome--changed';
+		$badge_label = __( 'CLI / Local Export', 'spacefast-static-comments' );
+	} elseif ( ! $conn['selected'] ) {
 		$badge_class = 'ar-rf-outcome--denied';
 		$badge_label = __( 'Space Not Connected', 'spacefast-static-comments' );
 	} elseif ( 'error' === $state['status'] ) {
@@ -496,7 +499,18 @@ function sf_static_comments_render_server_tab(): void {
 	echo '<span class="ar-rf-outcome ' . esc_attr( $badge_class ) . '">' . esc_html( $badge_label ) . '</span>';
 	echo '</div>';
 
-	if ( ! $conn['selected'] ) {
+	if ( ! $conn['available'] ) {
+		echo '<div class="ar-rf-mcp-notice" role="note">';
+		echo '<span>' . esc_html__( 'Running with Simply Static local exports (no Spacefast WordPress plugin active). Stage the Zero capsule and compiled manifest below when publishing with the Spacefast CLI (sf publish), or install the Spacefast plugin for 1-click provisioning from wp-admin.', 'spacefast-static-comments' ) . '</span>';
+		echo '</div>';
+		echo '<div class="ssc-actions-bar">';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="ar-rf-inline-form">';
+		wp_nonce_field( 'sf_static_comments_rotate_salt', 'sf_static_comments_salt_nonce' );
+		echo '<input type="hidden" name="action" value="sf_static_comments_rotate_salt" />';
+		echo '<button type="submit" class="button">' . esc_html__( 'Rotate Login Hash Salt', 'spacefast-static-comments' ) . '</button>';
+		echo '</form>';
+		echo '</div>';
+	} elseif ( ! $conn['selected'] ) {
 		$sf_url = admin_url( 'options-general.php?page=spacefast-wordpress' );
 		echo '<div class="ar-rf-mcp-notice" role="note">';
 		echo '<span>' . esc_html__( 'Connect your site to a Space in Settings → Spacefast first. Once connected, return here to provision the Zero comment server on that Space.', 'spacefast-static-comments' ) . ' ';
